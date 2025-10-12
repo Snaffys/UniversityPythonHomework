@@ -6,7 +6,7 @@ version = "0.1.0"
 line-length = 120
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "N", "B", "E225", "E226", "E227", "E228"]
+select = ["E", "W", "F", "I", "B", "E225", "E226", "E227", "E228"]
 preview = true
 
 [tool.ruff.format]
