@@ -36,3 +36,4 @@ class TestHeapSortProperties:
         heapsort_result = heap_sort(test_arr.copy())
         python_result = python_sorted(test_arr.copy())
         assert heapsort_result == python_result
+        
