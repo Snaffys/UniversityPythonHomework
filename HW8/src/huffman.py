@@ -100,6 +100,20 @@ def calculate_byte_size(value):
     return (value.bit_length() + 7) // 8
 
 
+def write_sized_int(value, data):
+    size_bytes = calculate_byte_size(value)
+    data.extend(size_bytes.to_bytes(1, "big"))
+    data.extend(value.to_bytes(size_bytes, "big"))
+
+
+def read_sized_int(data, index):
+    size_bytes = int.from_bytes(data[index : index + 1], "big")
+    index += 1
+    value = int.from_bytes(data[index : index + size_bytes], "big")
+    index += size_bytes
+    return value, index
+
+
 def serialize_table(table):
     items = []
     for char, code in table.items():
@@ -107,23 +121,13 @@ def serialize_table(table):
         items.append((char_bytes, code))
 
     table_data = bytearray()
-    num_items = len(items)
-    size_bytes = calculate_byte_size(num_items)
-
-    table_data.extend(size_bytes.to_bytes(1, "big"))  # size of number of elements
-    table_data.extend(num_items.to_bytes(size_bytes, "big"))  # amount of elements
+    write_sized_int(len(items), table_data)  # number of elements
 
     for char_bytes, code in items:
-        symbol_len_bytes = calculate_byte_size(len(char_bytes))
-        table_data.extend(symbol_len_bytes.to_bytes(1, "big"))  # size of length of char
-        table_data.extend(
-            len(char_bytes).to_bytes(symbol_len_bytes, "big")  # length of char
-        )
+        write_sized_int(len(char_bytes), table_data)  # length of char
         table_data.extend(char_bytes)  # char in bytes
 
-        code_len_bytes = calculate_byte_size(len(code))
-        table_data.extend(code_len_bytes.to_bytes(1, "big"))  # size of length of code
-        table_data.extend(len(code).to_bytes(code_len_bytes, "big"))  # length of code
+        write_sized_int(len(code), table_data)  # length of code
 
         code_bytes, code_padding = bits_to_bytes(code)
         table_data.extend(code_padding.to_bytes(1, "big"))  # padding
@@ -137,25 +141,16 @@ def deserialize_table(table_data):
     data = bytearray(table_data)
     index = 0
 
-    size_bytes = int.from_bytes(data[index : index + 1], "big")
-    index += 1
-    num_entries = int.from_bytes(data[index : index + size_bytes], "big")
-    index += size_bytes
+    num_entries, index = read_sized_int(data, index)
 
     for _ in range(num_entries):
-        symbol_len_bytes = int.from_bytes(data[index : index + 1], "big")
-        index += 1
-        char_len = int.from_bytes(data[index : index + symbol_len_bytes], "big")
-        index += symbol_len_bytes
+        char_len, index = read_sized_int(data, index)
 
         char_bytes = data[index : index + char_len]
         char = char_bytes.decode("utf-8")
         index += char_len
 
-        code_len_bytes = int.from_bytes(data[index : index + 1], "big")
-        index += 1
-        code_len = int.from_bytes(data[index : index + code_len_bytes], "big")
-        index += code_len_bytes
+        code_len, index = read_sized_int(data, index)
 
         code_padding = int.from_bytes(data[index : index + 1], "big")
         index += 1
